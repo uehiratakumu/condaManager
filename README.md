@@ -48,6 +48,15 @@ cd <クローン先のディレクトリ>
 ```bash
 cd backend
 
+# 仮想環境の作成（推奨）
+python -m venv .venv
+
+# 仮想環境の有効化
+# macOS/Linux:
+source .venv/bin/activate
+# Windows:
+# .venv\Scripts\activate
+
 # 依存関係のインストール
 pip install -r requirements.txt
 
@@ -56,6 +65,8 @@ uvicorn main:app --reload
 ```
 
 バックエンドは `http://localhost:8000` で起動します。
+
+**注意:** 仮想環境を使用することで、システムのPython環境を汚染せずに依存関係を管理できます。
 
 ### 3. フロントエンドのセットアップ
 
