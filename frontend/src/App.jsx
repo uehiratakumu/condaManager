@@ -20,6 +20,7 @@ function App() {
   const [cloneTarget, setCloneTarget] = useState(null)
   const [messageModal, setMessageModal] = useState(null) // { title, message }
   const [actionLoading, setActionLoading] = useState(false)
+  const [viewMode, setViewMode] = useState('grid') // 'grid' or 'table'
 
   const fetchEnvs = async () => {
     setLoading(true)
@@ -174,15 +175,31 @@ function App() {
 
   return (
     <div className="app-container">
-      <header className="app-header">
-        <h1>Conda Manager</h1>
+      <header>
+        <h1>🐍 Conda Environment Manager</h1>
         <div className="header-actions">
           <button className="create-btn" onClick={() => setShowCreateModal(true)}>
-            + New Environment
+            + Create Environment
           </button>
-          <button className="refresh-btn" onClick={fetchEnvs} disabled={loading}>
+          <button className="refresh-btn" onClick={fetchEnvs}>
             Refresh
           </button>
+          <div className="view-toggle">
+            <button
+              className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`}
+              onClick={() => setViewMode('grid')}
+              title="Grid View"
+            >
+              ⊞
+            </button>
+            <button
+              className={`view-btn ${viewMode === 'table' ? 'active' : ''}`}
+              onClick={() => setViewMode('table')}
+              title="Table View"
+            >
+              ☰
+            </button>
+          </div>
         </div>
       </header>
       <main>
@@ -196,6 +213,7 @@ function App() {
             onSelect={handleEnvSelect}
             onClone={setCloneTarget}
             onExport={handleExport}
+            viewMode={viewMode}
           />
         )}
       </main>
