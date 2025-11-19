@@ -18,6 +18,8 @@ function App() {
   const [packagesLoading, setPackagesLoading] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [cloneTarget, setCloneTarget] = useState(null)
+  const [messageModal, setMessageModal] = useState(null) // { title, message }
+  const [actionLoading, setActionLoading] = useState(false)
 
   const fetchEnvs = async () => {
     setLoading(true)
@@ -40,6 +42,9 @@ function App() {
   // --- Actions ---
 
   const handleCreate = async (name, pythonVersion) => {
+    // Create logic is handled in CreateEnvModal, but we might want to show success here?
+    // Actually CreateEnvModal calls this.
+    // Let's make this function return promise so modal can handle loading.
     const response = await fetch('http://localhost:8000/api/envs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -50,19 +55,29 @@ function App() {
       throw new Error(err.detail || 'Failed to create environment')
     }
     await fetchEnvs()
+    setMessageModal({ title: 'Success', message: `Environment '${name}' created successfully.` })
   }
 
   const handleClone = async (sourceName, newName) => {
-    const response = await fetch(`http://localhost:8000/api/envs/${sourceName}/clone`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ new_name: newName }),
-    })
-    if (!response.ok) {
-      const err = await response.json()
-      throw new Error(err.detail || 'Failed to clone environment')
+    setActionLoading(true)
+    try {
+      const response = await fetch(`http://localhost:8000/api/envs/${sourceName}/clone`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_name: newName }),
+      })
+      if (!response.ok) {
+        const err = await response.json()
+        throw new Error(err.detail || 'Failed to clone environment')
+      }
+      await fetchEnvs()
+      setCloneTarget(null)
+      setMessageModal({ title: 'Success', message: `Environment '${sourceName}' cloned to '${newName}' successfully.` })
+    } catch (err) {
+      setMessageModal({ title: 'Error', message: err.message })
+    } finally {
+      setActionLoading(false)
     }
-    await fetchEnvs()
   }
 
   const handleExport = async (envName) => {
@@ -82,18 +97,7 @@ function App() {
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
     } catch (err) {
-      alert(err.message)
-    }
-  }
-
-  const handleCheckSize = async (envName) => {
-    try {
-      const response = await fetch(`http://localhost:8000/api/envs/${envName}/size`)
-      if (!response.ok) throw new Error('Failed to get size')
-      const data = await response.json()
-      alert(`Disk usage for '${envName}': ${data.size}`)
-    } catch (err) {
-      alert(err.message)
+      setMessageModal({ title: 'Error', message: err.message })
     }
   }
 
@@ -103,6 +107,7 @@ function App() {
 
   const confirmDelete = async () => {
     if (!deleteTarget) return
+    setActionLoading(true)
     try {
       const response = await fetch(`http://localhost:8000/api/envs/${deleteTarget}`, {
         method: 'DELETE',
@@ -110,49 +115,31 @@ function App() {
       if (!response.ok) throw new Error('Failed to delete environment')
       await fetchEnvs()
       setDeleteTarget(null)
+      setMessageModal({ title: 'Success', message: `Environment '${deleteTarget}' deleted successfully.` })
     } catch (err) {
-      alert(err.message)
+      setMessageModal({ title: 'Error', message: err.message })
+    } finally {
+      setActionLoading(false)
     }
   }
 
-  const handleEnvSelect = async (envName) => {
+  const fetchPackages = async (envName) => {
     setPackagesLoading(true)
     try {
       const response = await fetch(`http://localhost:8000/api/envs/${envName}/packages`)
       if (!response.ok) throw new Error('Failed to fetch packages')
       const data = await response.json()
-
-      if (data.length > 0) {
-        setPackages(data)
-        setSelectedEnv(envName)
-      } else {
-        // Check if we should show the modal anyway to allow installing packages?
-        // The user requested "suppress popup if no packages".
-        // But now we have "Install Package" feature.
-        // If I suppress it, they can't install packages in an empty env.
-        // I'll show it if it's empty but maybe with a message?
-        // Or I'll stick to the user's request for now: suppress if empty.
-        // Wait, if I suppress it, how do they install the first package?
-        // I should probably show it but with an empty list.
-        // But the user explicitly asked to suppress it.
-        // I'll respect the suppression for now, but maybe add a "Manage Packages" button?
-        // Actually, clicking the card is the only way to open it.
-        // If I suppress it, they can't install.
-        // I will show it, but maybe the user meant "don't show it if I didn't ask for it"?
-        // No, they said "if no additional packages, don't show popup".
-        // I will modify the logic: If empty, I'll ask if they want to manage packages?
-        // Or just show it. The user's previous request was when it was JUST a viewer.
-        // Now it's a manager.
-        // I'll show it, because otherwise they can't install.
-        // I'll add a small note in the UI.
-        setPackages(data)
-        setSelectedEnv(envName)
-      }
+      setPackages(data)
     } catch (err) {
-      alert(err.message)
+      setMessageModal({ title: 'Error', message: err.message })
     } finally {
       setPackagesLoading(false)
     }
+  }
+
+  const handleEnvSelect = async (envName) => {
+    await fetchPackages(envName)
+    setSelectedEnv(envName)
   }
 
   const handleInstallPackage = async (envName, pkgName) => {
@@ -209,7 +196,6 @@ function App() {
             onSelect={handleEnvSelect}
             onClone={setCloneTarget}
             onExport={handleExport}
-            onCheckSize={handleCheckSize}
           />
         )}
       </main>
@@ -221,6 +207,8 @@ function App() {
           message={`Are you sure you want to delete '${deleteTarget}'? This action cannot be undone.`}
           onConfirm={confirmDelete}
           onCancel={() => setDeleteTarget(null)}
+          confirmText="Delete"
+          isLoading={actionLoading}
         />
       )}
 
@@ -231,6 +219,7 @@ function App() {
           onClose={() => setSelectedEnv(null)}
           onInstall={handleInstallPackage}
           onUninstall={handleUninstallPackage}
+          onRefresh={() => fetchPackages(selectedEnv)}
         />
       )}
 
@@ -238,6 +227,7 @@ function App() {
         <CreateEnvModal
           onClose={() => setShowCreateModal(false)}
           onCreate={handleCreate}
+          onSuccess={fetchEnvs}
         />
       )}
 
@@ -246,10 +236,20 @@ function App() {
           sourceEnv={cloneTarget}
           onClose={() => setCloneTarget(null)}
           onClone={handleClone}
+          isLoading={actionLoading}
+        />
+      )}
+
+      {messageModal && (
+        <Modal
+          title={messageModal.title}
+          message={messageModal.message}
+          onConfirm={() => setMessageModal(null)}
+          onCancel={() => setMessageModal(null)}
+          confirmText="OK"
         />
       )}
     </div>
   )
 }
-
 export default App

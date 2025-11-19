@@ -1,21 +1,12 @@
 import { useState } from 'react'
 
-function CloneEnvModal({ sourceEnv, onClose, onClone }) {
-    const [newName, setNewName] = useState(`${sourceEnv}-clone`)
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState(null)
+function CloneEnvModal({ sourceEnv, onClose, onClone, isLoading }) {
+    const [newName, setNewName] = useState(`${sourceEnv}_clone`)
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault()
-        setLoading(true)
-        setError(null)
-        try {
-            await onClone(sourceEnv, newName)
-            onClose()
-        } catch (err) {
-            setError(err.message)
-        } finally {
-            setLoading(false)
+        if (newName) {
+            onClone(sourceEnv, newName)
         }
     }
 
@@ -24,24 +15,24 @@ function CloneEnvModal({ sourceEnv, onClose, onClone }) {
             <div className="modal-content">
                 <h2>Clone Environment</h2>
                 <p>Cloning <strong>{sourceEnv}</strong></p>
-                {error && <div className="error-banner">{error}</div>}
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
-                        <label htmlFor="new-name">New Name</label>
+                        <label htmlFor="clone-name">New Environment Name</label>
                         <input
-                            id="new-name"
+                            id="clone-name"
                             type="text"
                             value={newName}
                             onChange={(e) => setNewName(e.target.value)}
                             required
+                            disabled={isLoading}
                         />
                     </div>
                     <div className="modal-actions">
-                        <button type="button" className="cancel-btn" onClick={onClose} disabled={loading}>
+                        <button type="button" className="cancel-btn" onClick={onClose} disabled={isLoading}>
                             Cancel
                         </button>
-                        <button type="submit" className="confirm-btn" disabled={loading}>
-                            {loading ? 'Cloning...' : 'Clone'}
+                        <button type="submit" className="create-btn" disabled={isLoading}>
+                            {isLoading ? 'Cloning...' : 'Clone'}
                         </button>
                     </div>
                 </form>

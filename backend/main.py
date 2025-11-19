@@ -305,6 +305,48 @@ def install_package(name: str, request: InstallPackageRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/envs/{name}/packages/file")
+def install_packages_from_file(name: str, file: UploadFile = File(...)):
+    try:
+        # Save uploaded file temporarily
+        temp_filename = f"temp_pkg_{file.filename}"
+        with open(temp_filename, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        try:
+            if file.filename.endswith('.txt'):
+                # Requirements file: pip install -r
+                subprocess.run(
+                    ["conda", "run", "-n", name, "pip", "install", "-r", temp_filename],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                return {"message": f"Packages from '{file.filename}' installed successfully (pip)."}
+            
+            elif file.filename.endswith('.yml') or file.filename.endswith('.yaml'):
+                # Environment file: conda env update
+                subprocess.run(
+                    ["conda", "env", "update", "-n", name, "-f", temp_filename],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                return {"message": f"Environment '{name}' updated from '{file.filename}' successfully."}
+            
+            else:
+                raise HTTPException(status_code=400, detail="Unsupported file format. Use .txt (requirements) or .yml (conda env)")
+                
+        finally:
+            # Cleanup temp file
+            if os.path.exists(temp_filename):
+                os.remove(temp_filename)
+                
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to install packages from file: {e.stderr}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.delete("/api/envs/{name}/packages/{package}")
 def uninstall_package(name: str, package: str):
     try:

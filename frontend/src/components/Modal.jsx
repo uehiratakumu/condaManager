@@ -1,12 +1,24 @@
-function Modal({ title, message, onConfirm, onCancel, confirmText = "Delete" }) {
+function Modal({ title, message, onConfirm, onCancel, confirmText = 'Confirm', isLoading = false }) {
     return (
         <div className="modal-overlay">
             <div className="modal-content">
                 <h2>{title}</h2>
                 <p>{message}</p>
                 <div className="modal-actions">
-                    <button className="cancel-btn" onClick={onCancel}>Cancel</button>
-                    <button className="confirm-btn" onClick={onConfirm}>{confirmText}</button>
+                    <button
+                        className="cancel-btn"
+                        onClick={onCancel}
+                        disabled={isLoading}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        className="confirm-btn"
+                        onClick={onConfirm}
+                        disabled={isLoading}
+                    >
+                        {isLoading ? 'Processing...' : confirmText}
+                    </button>
                 </div>
             </div>
         </div>

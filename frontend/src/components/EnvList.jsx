@@ -1,4 +1,4 @@
-function EnvList({ envs, onDelete, onSelect, onClone, onExport, onCheckSize }) {
+function EnvList({ envs, onDelete, onSelect, onClone, onExport }) {
     if (envs.length === 0) {
         return <div className="empty-state">No environments found.</div>
     }

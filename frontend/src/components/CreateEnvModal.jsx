@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
-function CreateEnvModal({ onClose, onCreate }) {
-    const [activeTab, setActiveTab] = useState('create') // 'create' | 'import'
+function CreateEnvModal({ onClose, onCreate, onSuccess }) {
+    const [activeTab, setActiveTab] = useState('manual')
     const [name, setName] = useState('')
     const [pythonVersion, setPythonVersion] = useState('3.9')
     const [importFile, setImportFile] = useState(null)
@@ -12,45 +12,32 @@ function CreateEnvModal({ onClose, onCreate }) {
         e.preventDefault()
         setLoading(true)
         setError(null)
+
         try {
-            if (activeTab === 'create') {
+            if (activeTab === 'manual') {
                 await onCreate(name, pythonVersion)
+                onClose()
             } else {
-                // Import logic
+                if (!importFile) return
+
                 const formData = new FormData()
                 formData.append('file', importFile)
                 if (name) formData.append('name', name)
-                if (pythonVersion) formData.append('python_version', pythonVersion)
+                formData.append('python_version', pythonVersion)
 
                 const response = await fetch('http://localhost:8000/api/envs/import', {
                     method: 'POST',
-                    body: formData,
+                    body: formData
                 })
 
                 if (!response.ok) {
                     const err = await response.json()
                     throw new Error(err.detail || 'Failed to import environment')
                 }
-                // Trigger refresh in parent (onCreate usually does this but we need to call fetchEnvs manually or reload)
-                // Since onCreate is passed from App.jsx, we might need a separate onImport prop or just reload page?
-                // Actually App.jsx passes handleCreate which calls fetchEnvs.
-                // We should probably just call a prop like onImportSuccess if provided, or modify onCreate to handle this?
-                // Let's assume we need to reload envs. 
-                // For now, I'll just call onCreate with special args or add a new prop.
-                // But I can't change App.jsx easily right now without another step.
-                // I'll just reload the page for now as a quick fix or assume the user will refresh.
-                // Better: I'll modify App.jsx later to pass onImport. 
-                // Wait, I can just call window.location.reload() or similar? No that's bad UX.
-                // I'll just call onCreate(null, null) to trigger refresh? No handleCreate expects args.
-                // I'll update App.jsx next. For now let's just close.
-                // Actually, I can just throw if I can't refresh.
-                // Let's add onImport prop to this component in the next step.
+
+                if (onSuccess) onSuccess()
+                onClose()
             }
-            onClose()
-            // We need to trigger a refresh. 
-            // I'll add a window.location.reload() for now as a fallback if onImport isn't passed, 
-            // but I will update App.jsx to pass onImport.
-            window.location.reload()
         } catch (err) {
             setError(err.message)
         } finally {
@@ -61,18 +48,20 @@ function CreateEnvModal({ onClose, onCreate }) {
     return (
         <div className="modal-overlay">
             <div className="modal-content">
-                <h2>New Environment</h2>
+                <h2>Create New Environment</h2>
 
                 <div className="tabs">
                     <button
-                        className={`tab-btn ${activeTab === 'create' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('create')}
+                        className={`tab-btn ${activeTab === 'manual' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('manual')}
+                        disabled={loading}
                     >
                         Create Manually
                     </button>
                     <button
                         className={`tab-btn ${activeTab === 'import' ? 'active' : ''}`}
                         onClick={() => setActiveTab('import')}
+                        disabled={loading}
                     >
                         Import from File
                     </button>
@@ -81,17 +70,17 @@ function CreateEnvModal({ onClose, onCreate }) {
                 {error && <div className="error-banner">{error}</div>}
 
                 <form onSubmit={handleSubmit}>
-                    {activeTab === 'create' ? (
+                    {activeTab === 'manual' ? (
                         <>
                             <div className="form-group">
-                                <label htmlFor="env-name">Name</label>
+                                <label htmlFor="env-name">Environment Name</label>
                                 <input
                                     id="env-name"
                                     type="text"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     required
-                                    placeholder="my-env"
+                                    disabled={loading}
                                 />
                             </div>
                             <div className="form-group">
@@ -100,7 +89,9 @@ function CreateEnvModal({ onClose, onCreate }) {
                                     id="python-version"
                                     value={pythonVersion}
                                     onChange={(e) => setPythonVersion(e.target.value)}
+                                    disabled={loading}
                                 >
+                                    <option value="3.7">3.7</option>
                                     <option value="3.8">3.8</option>
                                     <option value="3.9">3.9</option>
                                     <option value="3.10">3.10</option>
@@ -120,6 +111,7 @@ function CreateEnvModal({ onClose, onCreate }) {
                                         accept=".yml,.yaml,.txt"
                                         onChange={(e) => setImportFile(e.target.files[0])}
                                         required
+                                        disabled={loading}
                                     />
                                     <div className="file-input-label">
                                         {importFile ? 'Change File' : 'Click to Select File'}
@@ -138,25 +130,26 @@ function CreateEnvModal({ onClose, onCreate }) {
                                     type="text"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    placeholder="my-imported-env"
+                                    placeholder="Leave empty to use name from .yml"
+                                    disabled={loading}
                                 />
                             </div>
-                            {importFile?.name.endsWith('.txt') && (
-                                <div className="form-group">
-                                    <label htmlFor="import-python">Python Version (for requirements.txt)</label>
-                                    <select
-                                        id="import-python"
-                                        value={pythonVersion}
-                                        onChange={(e) => setPythonVersion(e.target.value)}
-                                    >
-                                        <option value="3.8">3.8</option>
-                                        <option value="3.9">3.9</option>
-                                        <option value="3.10">3.10</option>
-                                        <option value="3.11">3.11</option>
-                                        <option value="3.12">3.12</option>
-                                    </select>
-                                </div>
-                            )}
+                            <div className="form-group">
+                                <label htmlFor="import-python">Python Version (For requirements.txt)</label>
+                                <select
+                                    id="import-python"
+                                    value={pythonVersion}
+                                    onChange={(e) => setPythonVersion(e.target.value)}
+                                    disabled={loading}
+                                >
+                                    <option value="3.7">3.7</option>
+                                    <option value="3.8">3.8</option>
+                                    <option value="3.9">3.9</option>
+                                    <option value="3.10">3.10</option>
+                                    <option value="3.11">3.11</option>
+                                    <option value="3.12">3.12</option>
+                                </select>
+                            </div>
                         </>
                     )}
 
@@ -164,8 +157,8 @@ function CreateEnvModal({ onClose, onCreate }) {
                         <button type="button" className="cancel-btn" onClick={onClose} disabled={loading}>
                             Cancel
                         </button>
-                        <button type="submit" className="confirm-btn" disabled={loading}>
-                            {loading ? (activeTab === 'create' ? 'Creating...' : 'Importing...') : (activeTab === 'create' ? 'Create' : 'Import')}
+                        <button type="submit" className="create-btn" disabled={loading}>
+                            {loading ? 'Processing...' : (activeTab === 'manual' ? 'Create' : 'Import')}
                         </button>
                     </div>
                 </form>
