@@ -1,6 +1,11 @@
-function EnvList({ envs, onDelete, onSelect, onClone, onExport, viewMode = 'grid' }) {
+function EnvList({ envs, onDelete, onSelect, onClone, onExport, viewMode = 'grid', sortBy, sortOrder, onSort }) {
     if (envs.length === 0) {
         return <div className="empty-state">No environments found.</div>
+    }
+
+    const getSortIndicator = (field) => {
+        if (sortBy !== field) return ' ↕'
+        return sortOrder === 'asc' ? ' ↑' : ' ↓'
     }
 
     if (viewMode === 'table') {
@@ -9,10 +14,18 @@ function EnvList({ envs, onDelete, onSelect, onClone, onExport, viewMode = 'grid
                 <table className="env-table">
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Python Version</th>
-                            <th>Size</th>
-                            <th>Last Updated</th>
+                            <th onClick={() => onSort('name')} style={{ cursor: 'pointer' }}>
+                                Name{getSortIndicator('name')}
+                            </th>
+                            <th onClick={() => onSort('python_version')} style={{ cursor: 'pointer' }}>
+                                Python Version{getSortIndicator('python_version')}
+                            </th>
+                            <th onClick={() => onSort('size')} style={{ cursor: 'pointer' }}>
+                                Size{getSortIndicator('size')}
+                            </th>
+                            <th onClick={() => onSort('last_modified')} style={{ cursor: 'pointer' }}>
+                                Last Updated{getSortIndicator('last_modified')}
+                            </th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -86,9 +99,18 @@ function EnvList({ envs, onDelete, onSelect, onClone, onExport, viewMode = 'grid
                         <h3 className="env-name">{env.name || 'base'}</h3>
                         <p className="env-path" title={env.path}>{env.path}</p>
                         <div className="env-meta">
-                            <span className="meta-item">Python: {env.python_version}</span>
-                            <span className="meta-item">Size: {env.size}</span>
-                            <span className="meta-item">Updated: {env.last_modified}</span>
+                            <span className="meta-item">
+                                <span className="meta-label">Python</span>
+                                <span className="meta-value">{env.python_version}</span>
+                            </span>
+                            <span className="meta-item">
+                                <span className="meta-label">Size</span>
+                                <span className="meta-value">{env.size}</span>
+                            </span>
+                            <span className="meta-item">
+                                <span className="meta-label">Updated</span>
+                                <span className="meta-value">{env.last_modified}</span>
+                            </span>
                         </div>
                     </div>
                     <div className="env-actions">

@@ -21,6 +21,8 @@ function App() {
   const [messageModal, setMessageModal] = useState(null) // { title, message }
   const [actionLoading, setActionLoading] = useState(false)
   const [viewMode, setViewMode] = useState('grid') // 'grid' or 'table'
+  const [sortBy, setSortBy] = useState('name') // 'name', 'python_version', 'size', 'last_modified'
+  const [sortOrder, setSortOrder] = useState('asc') // 'asc' or 'desc'
 
   const fetchEnvs = async () => {
     setLoading(true)
@@ -39,6 +41,44 @@ function App() {
   useEffect(() => {
     fetchEnvs()
   }, [])
+
+  // Sort environments
+  const sortedEnvs = [...envs].sort((a, b) => {
+    let aVal = a[sortBy]
+    let bVal = b[sortBy]
+
+    // Handle size sorting (convert to bytes for comparison)
+    if (sortBy === 'size') {
+      const parseSize = (size) => {
+        if (size === 'N/A') return 0
+        const units = { 'B': 1, 'K': 1024, 'M': 1024 * 1024, 'G': 1024 * 1024 * 1024 }
+        const match = size.match(/^([\d.]+)([BKMG])/)
+        if (!match) return 0
+        return parseFloat(match[1]) * (units[match[2]] || 1)
+      }
+      aVal = parseSize(aVal)
+      bVal = parseSize(bVal)
+    }
+
+    // Handle string comparison
+    if (typeof aVal === 'string' && typeof bVal === 'string') {
+      aVal = aVal.toLowerCase()
+      bVal = bVal.toLowerCase()
+    }
+
+    if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1
+    if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1
+    return 0
+  })
+
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(field)
+      setSortOrder('asc')
+    }
+  }
 
   // --- Actions ---
 
@@ -184,6 +224,26 @@ function App() {
           <button className="refresh-btn" onClick={fetchEnvs}>
             Refresh
           </button>
+          <div className="sort-dropdown">
+            <select
+              value={`${sortBy}-${sortOrder}`}
+              onChange={(e) => {
+                const [field, order] = e.target.value.split('-')
+                setSortBy(field)
+                setSortOrder(order)
+              }}
+              className="sort-select"
+            >
+              <option value="name-asc">Name (A-Z)</option>
+              <option value="name-desc">Name (Z-A)</option>
+              <option value="python_version-asc">Python (Low-High)</option>
+              <option value="python_version-desc">Python (High-Low)</option>
+              <option value="size-asc">Size (Small-Large)</option>
+              <option value="size-desc">Size (Large-Small)</option>
+              <option value="last_modified-asc">Date (Old-New)</option>
+              <option value="last_modified-desc">Date (New-Old)</option>
+            </select>
+          </div>
           <div className="view-toggle">
             <button
               className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`}
@@ -208,12 +268,15 @@ function App() {
           <div className="loading">Loading environments...</div>
         ) : (
           <EnvList
-            envs={envs}
+            envs={sortedEnvs}
             onDelete={handleDeleteClick}
             onSelect={handleEnvSelect}
             onClone={setCloneTarget}
             onExport={handleExport}
             viewMode={viewMode}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSort={handleSort}
           />
         )}
       </main>
