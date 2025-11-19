@@ -1,0 +1,257 @@
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+import subprocess
+import json
+import os
+from datetime import datetime
+from pydantic import BaseModel
+
+app = FastAPI()
+
+# CORS configuration to allow frontend to communicate with backend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origin
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class Environment(BaseModel):
+    name: str
+    path: str
+
+@app.get("/api/envs")
+def get_environments():
+    try:
+        # Run conda env list with json output
+        result = subprocess.run(
+            ["conda", "env", "list", "--json"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        data = json.loads(result.stdout)
+        
+        envs = []
+        for path in data.get("envs", []):
+            # Extract name from path
+            name = path.split("/")[-1]
+            
+            # Get Size
+            size = "N/A"
+            try:
+                # Use du -sh to get size
+                du_res = subprocess.run(
+                    ["du", "-sh", path],
+                    capture_output=True,
+                    text=True
+                )
+                if du_res.returncode == 0:
+                    size = du_res.stdout.split()[0]
+            except Exception:
+                pass
+
+            # Get Last Modified
+            last_modified = "N/A"
+            try:
+                # Use os.path.getmtime
+                mtime = os.path.getmtime(path)
+                last_modified = datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M')
+            except Exception:
+                pass
+
+            envs.append({
+                "name": name, 
+                "path": path,
+                "size": size,
+                "last_modified": last_modified
+            })
+            
+        return envs
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list environments: {e.stderr}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/envs/{name}")
+def delete_environment(name: str):
+    try:
+        # Prevent deleting base environment
+        if name == "base":
+             raise HTTPException(status_code=400, detail="Cannot delete 'base' environment.")
+
+        # Run conda remove --name <name> --all -y
+        subprocess.run(
+            ["conda", "remove", "--name", name, "--all", "-y"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return {"message": f"Environment '{name}' deleted successfully."}
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete environment: {e.stderr}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/envs/{name}/packages")
+def get_packages(name: str):
+    try:
+        # Run conda list -n <name> --json
+        result = subprocess.run(
+            ["conda", "list", "-n", name, "--json"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        packages = json.loads(result.stdout)
+        
+        # Define default packages to exclude
+        # This list is based on a standard python environment
+        excluded_packages = {
+            "bzip2", "ca-certificates", "libffi", "ncurses", "openssl", "pip", "python", 
+            "readline", "setuptools", "sqlite", "tk", "wheel", "xz", "zlib", 
+            "libsqlite", "libzlib", "tzdata", "liblzma", "libuuid", "libnsl", "libtirpc"
+        }
+        
+        filtered_packages = [
+            pkg for pkg in packages 
+            if pkg["name"] not in excluded_packages and not pkg["name"].startswith("python-")
+        ]
+        
+        return filtered_packages
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list packages: {e.stderr}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class CreateEnvRequest(BaseModel):
+    name: str
+    python_version: str = "3.9"
+
+@app.post("/api/envs")
+def create_environment(request: CreateEnvRequest):
+    try:
+        subprocess.run(
+            ["conda", "create", "-n", request.name, f"python={request.python_version}", "-y"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return {"message": f"Environment '{request.name}' created successfully."}
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create environment: {e.stderr}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class CloneEnvRequest(BaseModel):
+    new_name: str
+
+@app.post("/api/envs/{name}/clone")
+def clone_environment(name: str, request: CloneEnvRequest):
+    try:
+        subprocess.run(
+            ["conda", "create", "--name", request.new_name, "--clone", name, "-y"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return {"message": f"Environment '{name}' cloned to '{request.new_name}' successfully."}
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clone environment: {e.stderr}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/envs/{name}/export")
+def export_environment(name: str):
+    try:
+        result = subprocess.run(
+            ["conda", "env", "export", "-n", name],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return {"yaml": result.stdout}
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to export environment: {e.stderr}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/envs/{name}/size")
+def get_environment_size(name: str):
+    try:
+        # Get path first
+        result = subprocess.run(
+            ["conda", "env", "list", "--json"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        data = json.loads(result.stdout)
+        env_path = None
+        for path in data.get("envs", []):
+            if path.split("/")[-1] == name:
+                env_path = path
+                break
+        
+        if not env_path:
+             # Fallback for base or if name inference fails, try to guess or just fail
+             if name == 'base':
+                 # Base is usually the first one or root of others
+                 env_path = data.get("envs", [])[0] # Assumption
+             else:
+                 raise HTTPException(status_code=404, detail="Environment path not found")
+
+        # Use du -sh to get size
+        du_res = subprocess.run(
+            ["du", "-sh", env_path],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        size = du_res.stdout.split()[0]
+        return {"size": size}
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get size: {e.stderr}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class InstallPackageRequest(BaseModel):
+    package: str
+
+@app.post("/api/envs/{name}/packages")
+def install_package(name: str, request: InstallPackageRequest):
+    try:
+        subprocess.run(
+            ["conda", "install", "-n", name, request.package, "-y"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return {"message": f"Package '{request.package}' installed successfully."}
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to install package: {e.stderr}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/envs/{name}/packages/{package}")
+def uninstall_package(name: str, package: str):
+    try:
+        subprocess.run(
+            ["conda", "remove", "-n", name, package, "-y"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return {"message": f"Package '{package}' uninstalled successfully."}
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to uninstall package: {e.stderr}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
