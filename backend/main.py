@@ -4,6 +4,7 @@ import subprocess
 import json
 import os
 import shutil
+import yaml
 from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional
@@ -359,14 +360,62 @@ def install_packages_from_file(name: str, file: UploadFile = File(...)):
                 return {"message": f"Packages from '{file.filename}' installed successfully (pip)."}
             
             elif file.filename.endswith('.yml') or file.filename.endswith('.yaml'):
-                # Environment file: conda env update
-                subprocess.run(
-                    ["conda", "env", "update", "-n", name, "-f", temp_filename],
-                    capture_output=True,
-                    text=True,
-                    check=True
-                )
-                return {"message": f"Environment '{name}' updated from '{file.filename}' successfully."}
+                # Environment file: parse and install only dependencies, excluding python
+                with open(temp_filename, 'r') as f:
+                    env_data = yaml.safe_load(f)
+                
+                # Extract dependencies
+                dependencies = env_data.get('dependencies', [])
+                
+                # Separate conda and pip packages
+                conda_packages = []
+                pip_packages = []
+                
+                for dep in dependencies:
+                    if isinstance(dep, dict) and 'pip' in dep:
+                        # Pip dependencies
+                        pip_packages.extend(dep['pip'])
+                    elif isinstance(dep, str):
+                        # Conda dependencies - exclude python and python-related packages
+                        dep_lower = dep.lower()
+                        if not any([
+                            dep_lower.startswith('python='),
+                            dep_lower.startswith('python '),
+                            dep_lower == 'python',
+                            dep_lower.startswith('python_abi'),
+                            dep_lower.startswith('python-'),
+                        ]):
+                            # Keep package name and version, but remove build string
+                            # Format: package=version=build -> package=version
+                            parts = dep.split('=')
+                            if len(parts) >= 2:
+                                pkg_with_version = f"{parts[0]}={parts[1]}"
+                                conda_packages.append(pkg_with_version)
+                            else:
+                                conda_packages.append(dep)
+                
+                # Install conda packages
+                if conda_packages:
+                    print(f"Installing conda packages: {conda_packages}")
+                    subprocess.run(
+                        ["conda", "install", "-n", name, "-y"] + conda_packages,
+                        capture_output=True,
+                        text=True,
+                        check=True
+                    )
+                
+                # Install pip packages
+                if pip_packages:
+                    print(f"Installing pip packages: {pip_packages}")
+                    subprocess.run(
+                        ["conda", "run", "-n", name, "pip", "install"] + pip_packages,
+                        capture_output=True,
+                        text=True,
+                        check=True
+                    )
+                
+                installed_count = len(conda_packages) + len(pip_packages)
+                return {"message": f"{installed_count} packages from '{file.filename}' installed successfully (Python version preserved)."}
             
             else:
                 raise HTTPException(status_code=400, detail="Unsupported file format. Use .txt (requirements) or .yml (conda env)")
@@ -377,8 +426,14 @@ def install_packages_from_file(name: str, file: UploadFile = File(...)):
                 os.remove(temp_filename)
                 
     except subprocess.CalledProcessError as e:
-        raise HTTPException(status_code=500, detail=f"Failed to install packages from file: {e.stderr}")
+        error_msg = f"Failed to install packages from file: {e.stderr}"
+        print(f"ERROR: {error_msg}")
+        raise HTTPException(status_code=500, detail=error_msg)
     except Exception as e:
+        error_msg = f"Exception in install_packages_from_file: {str(e)}"
+        print(f"ERROR: {error_msg}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/api/envs/{name}/packages/{package}")
