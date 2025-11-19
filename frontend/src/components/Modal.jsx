@@ -1,4 +1,4 @@
-function Modal({ title, message, onConfirm, onCancel }) {
+function Modal({ title, message, onConfirm, onCancel, confirmText = "Delete" }) {
     return (
         <div className="modal-overlay">
             <div className="modal-content">
@@ -6,7 +6,7 @@ function Modal({ title, message, onConfirm, onCancel }) {
                 <p>{message}</p>
                 <div className="modal-actions">
                     <button className="cancel-btn" onClick={onCancel}>Cancel</button>
-                    <button className="confirm-btn" onClick={onConfirm}>Delete</button>
+                    <button className="confirm-btn" onClick={onConfirm}>{confirmText}</button>
                 </div>
             </div>
         </div>

@@ -1,21 +1,89 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 import subprocess
 import json
 import os
+import shutil
 from datetime import datetime
 from pydantic import BaseModel
+from typing import Optional
 
 app = FastAPI()
 
 # CORS configuration to allow frontend to communicate with backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origin
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ... (existing code) ...
+
+@app.post("/api/envs/import")
+def import_environment(
+    file: UploadFile = File(...),
+    name: Optional[str] = Form(None),
+    python_version: str = Form("3.9")
+):
+    try:
+        # Save uploaded file temporarily
+        temp_filename = f"temp_{file.filename}"
+        with open(temp_filename, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        try:
+            if file.filename.endswith('.yml') or file.filename.endswith('.yaml'):
+                # Conda environment file
+                cmd = ["conda", "env", "create", "-f", temp_filename]
+                if name:
+                    cmd.extend(["-n", name])
+                
+                subprocess.run(cmd, capture_output=True, text=True, check=True)
+                return {"message": "Environment imported successfully from YAML."}
+            
+            elif file.filename.endswith('.txt'):
+                # Requirements file
+                if not name:
+                    raise HTTPException(status_code=400, detail="Environment name is required for requirements.txt import")
+                
+                # 1. Create environment
+                subprocess.run(
+                    ["conda", "create", "-n", name, f"python={python_version}", "-y"],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                
+                # 2. Install requirements using pip
+                # We use 'conda run' to execute pip inside the new environment
+                subprocess.run(
+                    ["conda", "run", "-n", name, "pip", "install", "-r", temp_filename],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                return {"message": f"Environment '{name}' created and requirements installed."}
+            
+            else:
+                raise HTTPException(status_code=400, detail="Unsupported file format. Use .yml, .yaml, or .txt")
+                
+        finally:
+            # Cleanup temp file
+            if os.path.exists(temp_filename):
+                os.remove(temp_filename)
+                
+    except subprocess.CalledProcessError as e:
+        # Cleanup if failed (though finally block handles it, we might want to delete the partial env? 
+        # For now just report error)
+        raise HTTPException(status_code=500, detail=f"Import failed: {e.stderr}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
 class Environment(BaseModel):
     name: str
@@ -240,15 +308,26 @@ def install_package(name: str, request: InstallPackageRequest):
 @app.delete("/api/envs/{name}/packages/{package}")
 def uninstall_package(name: str, package: str):
     try:
+        # Try conda remove first
         subprocess.run(
             ["conda", "remove", "-n", name, package, "-y"],
             capture_output=True,
             text=True,
             check=True
         )
-        return {"message": f"Package '{package}' uninstalled successfully."}
-    except subprocess.CalledProcessError as e:
-        raise HTTPException(status_code=500, detail=f"Failed to uninstall package: {e.stderr}")
+        return {"message": f"Package '{package}' uninstalled successfully (conda)."}
+    except subprocess.CalledProcessError:
+        # If conda remove fails, try pip uninstall
+        try:
+            subprocess.run(
+                ["conda", "run", "-n", name, "pip", "uninstall", package, "-y"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            return {"message": f"Package '{package}' uninstalled successfully (pip)."}
+        except subprocess.CalledProcessError as e:
+            raise HTTPException(status_code=500, detail=f"Failed to uninstall package: {e.stderr}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
