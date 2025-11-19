@@ -11,6 +11,7 @@ function EnvList({ envs, onDelete, onSelect, onClone, onExport }) {
                         <h3 className="env-name">{env.name || 'base'}</h3>
                         <p className="env-path" title={env.path}>{env.path}</p>
                         <div className="env-meta">
+                            <span className="meta-item">Python: {env.python_version}</span>
                             <span className="meta-item">Size: {env.size}</span>
                             <span className="meta-item">Updated: {env.last_modified}</span>
                         </div>

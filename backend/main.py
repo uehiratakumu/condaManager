@@ -129,11 +129,30 @@ def get_environments():
             except Exception:
                 pass
 
+            # Get Python Version
+            python_version = "N/A"
+            try:
+                # Run python --version in the environment
+                py_res = subprocess.run(
+                    ["conda", "run", "-n", name, "python", "--version"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if py_res.returncode == 0:
+                    # Output is like "Python 3.9.18"
+                    version_str = py_res.stdout.strip() or py_res.stderr.strip()
+                    if version_str.startswith("Python "):
+                        python_version = version_str.replace("Python ", "")
+            except Exception:
+                pass
+
             envs.append({
                 "name": name, 
                 "path": path,
                 "size": size,
-                "last_modified": last_modified
+                "last_modified": last_modified,
+                "python_version": python_version
             })
             
         return envs
