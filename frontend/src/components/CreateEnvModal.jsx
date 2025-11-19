@@ -15,6 +15,7 @@ function CreateEnvModal({ onClose, onCreate, onSuccess }) {
 
         try {
             if (activeTab === 'manual') {
+                console.log('Creating environment with Python version:', pythonVersion)
                 await onCreate(name, pythonVersion)
                 onClose()
             } else {

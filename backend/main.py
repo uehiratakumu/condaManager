@@ -132,19 +132,27 @@ def get_environments():
             # Get Python Version
             python_version = "N/A"
             try:
-                # Run python --version in the environment
-                py_res = subprocess.run(
-                    ["conda", "run", "-n", name, "python", "--version"],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
-                )
-                if py_res.returncode == 0:
-                    # Output is like "Python 3.9.18"
-                    version_str = py_res.stdout.strip() or py_res.stderr.strip()
-                    if version_str.startswith("Python "):
-                        python_version = version_str.replace("Python ", "")
-            except Exception:
+                # Use direct path to python executable instead of conda run
+                python_path = os.path.join(path, "bin", "python")
+                if os.path.exists(python_path):
+                    py_res = subprocess.run(
+                        [python_path, "--version"],
+                        capture_output=True,
+                        text=True,
+                        timeout=5
+                    )
+                    if py_res.returncode == 0:
+                        # Output is like "Python 3.11.14"
+                        version_str = py_res.stdout.strip() or py_res.stderr.strip()
+                        if version_str.startswith("Python "):
+                            python_version = version_str.replace("Python ", "")
+                        print(f"Environment '{name}': detected Python version = {python_version}")
+                    else:
+                        print(f"Environment '{name}': failed to get Python version, returncode = {py_res.returncode}")
+                else:
+                    print(f"Environment '{name}': Python executable not found at {python_path}")
+            except Exception as e:
+                print(f"Environment '{name}': exception while getting Python version: {e}")
                 pass
 
             envs.append({
@@ -222,16 +230,23 @@ class CreateEnvRequest(BaseModel):
 @app.post("/api/envs")
 def create_environment(request: CreateEnvRequest):
     try:
-        subprocess.run(
-            ["conda", "create", "-n", request.name, f"python={request.python_version}", "-y"],
+        print(f"Creating environment '{request.name}' with Python version: {request.python_version}")
+        # Use conda-forge channel to ensure the requested Python version is available
+        result = subprocess.run(
+            ["conda", "create", "-n", request.name, f"python={request.python_version}", "-c", "conda-forge", "-y"],
             capture_output=True,
             text=True,
             check=True
         )
+        print(f"Conda create output: {result.stdout}")
+        if result.stderr:
+            print(f"Conda create stderr: {result.stderr}")
         return {"message": f"Environment '{request.name}' created successfully."}
     except subprocess.CalledProcessError as e:
+        print(f"Error creating environment: {e.stderr}")
         raise HTTPException(status_code=500, detail=f"Failed to create environment: {e.stderr}")
     except Exception as e:
+        print(f"Exception creating environment: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 class CloneEnvRequest(BaseModel):
