@@ -37,8 +37,8 @@ Conda環境を閲覧、管理、分析するためのモダンなWebアプリケ
 ### 1. リポジトリのクローン
 
 ```bash
-git clone <repository-url>
-cd NSSOL
+git clone https://github.com/uehiratakumu/condaManager.git
+cd <クローン先のディレクトリ>
 ```
 
 ### 2. バックエンドのセットアップ
