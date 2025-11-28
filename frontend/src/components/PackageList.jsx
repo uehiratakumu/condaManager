@@ -3,8 +3,6 @@ import Modal from './Modal'
 
 function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRefresh }) {
     const [newPackage, setNewPackage] = useState('')
-    const [packageVersion, setPackageVersion] = useState('')
-    const [specifyVersion, setSpecifyVersion] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [showInstallSection, setShowInstallSection] = useState(false)
     const [sortBy, setSortBy] = useState('name') // 'name' or 'build_string'
@@ -46,12 +44,7 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
         e.preventDefault()
         if (!newPackage) return
 
-        let pkgToInstall = newPackage
-        if (specifyVersion && packageVersion) {
-            pkgToInstall = `${newPackage}=${packageVersion}`
-        }
-
-        setConfirmState({ type: 'install', pkg: pkgToInstall })
+        setConfirmState({ type: 'install', pkg: newPackage })
     }
 
     const handleUninstallClick = (pkgName) => {
@@ -81,8 +74,6 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
             try {
                 await onInstall(envName, pkg)
                 setNewPackage('')
-                setPackageVersion('')
-                setSpecifyVersion(false)
                 setMessageModal({ title: 'Success', message: `Package '${pkg}' installed successfully.` })
             } catch (err) {
                 setMessageModal({ title: 'Error', message: err.message })
@@ -150,60 +141,19 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
                         {showInstallSection && (
                             <div className="install-container">
                                 {/* Manual Install */}
-                                <form onSubmit={handleInstallClick} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                    <div style={{ display: 'flex', gap: '1rem', width: '100%' }}>
-                                        <input
-                                            type="text"
-                                            placeholder="Package name (e.g. numpy)"
-                                            value={newPackage}
-                                            onChange={(e) => setNewPackage(e.target.value)}
-                                            disabled={installing}
-                                            className="search-input" // Use same style as search input
-                                            style={{ flex: 1 }}
-                                        />
-                                        <button type="submit" className="create-btn" disabled={installing || !newPackage}>
-                                            {installing ? 'Installing...' : 'Install'}
-                                        </button>
-                                    </div>
-
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem', minHeight: '38px' }}>
-                                        <label
-                                            htmlFor="specify-version"
-                                            style={{
-                                                fontSize: '0.9rem',
-                                                color: 'var(--text-primary)',
-                                                cursor: 'pointer',
-                                                userSelect: 'none',
-                                                fontWeight: '500',
-                                                marginRight: '-0.25rem'
-                                            }}
-                                        >
-                                            Specify Version
-                                        </label>
-
-                                        <label className="toggle-switch">
-                                            <input
-                                                type="checkbox"
-                                                id="specify-version"
-                                                checked={specifyVersion}
-                                                onChange={(e) => setSpecifyVersion(e.target.checked)}
-                                                disabled={installing}
-                                            />
-                                            <span className="slider"></span>
-                                        </label>
-
-                                        {specifyVersion && (
-                                            <input
-                                                type="text"
-                                                placeholder="e.g. 1.21.0"
-                                                value={packageVersion}
-                                                onChange={(e) => setPackageVersion(e.target.value)}
-                                                disabled={installing}
-                                                className="search-input"
-                                                style={{ width: '120px', padding: '0.4rem', fontSize: '0.9rem', marginLeft: '0.5rem' }}
-                                            />
-                                        )}
-                                    </div>
+                                <form onSubmit={handleInstallClick} style={{ display: 'flex', gap: '1rem', width: '100%' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="Package name (e.g. numpy or numpy==2.3.5)"
+                                        value={newPackage}
+                                        onChange={(e) => setNewPackage(e.target.value)}
+                                        disabled={installing}
+                                        className="search-input"
+                                        style={{ flex: 1 }}
+                                    />
+                                    <button type="submit" className="create-btn" disabled={installing || !newPackage}>
+                                        {installing ? 'Installing...' : 'Install'}
+                                    </button>
                                 </form>
 
                                 <div className="divider"><span>OR</span></div>
