@@ -5,10 +5,15 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
     const [newPackage, setNewPackage] = useState('')
     const [packageVersion, setPackageVersion] = useState('')
     const [specifyVersion, setSpecifyVersion] = useState(false)
+    const [searchQuery, setSearchQuery] = useState('')
     const [installing, setInstalling] = useState(false)
     const [confirmState, setConfirmState] = useState(null) // { type: 'install'|'uninstall'|'file-install', pkg: string, file: File }
     const [messageModal, setMessageModal] = useState(null) // { title, message }
     const [selectedFile, setSelectedFile] = useState(null)
+
+    const filteredPackages = packages.filter(pkg =>
+        pkg.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
 
     const handleInstallClick = (e) => {
         e.preventDefault()
@@ -181,8 +186,20 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
                     </div>
 
                     <div className="package-list-container">
-                        {packages.length === 0 ? (
-                            <p>No packages found.</p>
+                        <div style={{ marginBottom: '1rem', position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card-bg)', paddingBottom: '0.5rem' }}>
+                            <input
+                                type="text"
+                                placeholder="🔍 Search packages..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="search-input"
+                            />
+                        </div>
+
+                        {filteredPackages.length === 0 ? (
+                            <p style={{ textAlign: 'center', color: 'var(--text-secondary)', marginTop: '2rem' }}>
+                                {packages.length === 0 ? 'No packages found.' : 'No matching packages found.'}
+                            </p>
                         ) : (
                             <table className="package-table">
                                 <thead>
@@ -194,7 +211,7 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {packages.map((pkg, index) => (
+                                    {filteredPackages.map((pkg, index) => (
                                         <tr key={`${pkg.name}-${index}`}>
                                             <td>{pkg.name}</td>
                                             <td>{pkg.version}</td>

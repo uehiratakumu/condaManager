@@ -454,11 +454,17 @@ main {
 
 .install-form input {
   flex: 1;
-  padding: 0.5rem;
+  padding: 0.75rem;
   border-radius: 0.5rem;
   border: 1px solid var(--border-color);
   background-color: var(--bg-color);
   color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.install-form input:focus {
+  outline: none;
+  border-color: var(--accent-color);
 }
 
 .small-btn {
@@ -716,4 +722,20 @@ input:focus+.slider {
 
 input:checked+.slider:before {
   transform: translateX(16px);
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
 }
