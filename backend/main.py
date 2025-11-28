@@ -215,20 +215,7 @@ def get_packages(name: str):
         )
         packages = json.loads(result.stdout)
         
-        # Define default packages to exclude
-        # This list is based on a standard python environment
-        excluded_packages = {
-            "bzip2", "ca-certificates", "libffi", "ncurses", "openssl", "pip", "python", 
-            "readline", "setuptools", "sqlite", "tk", "wheel", "xz", "zlib", 
-            "libsqlite", "libzlib", "tzdata", "liblzma", "libuuid", "libnsl", "libtirpc"
-        }
-        
-        filtered_packages = [
-            pkg for pkg in packages 
-            if pkg["name"] not in excluded_packages and not pkg["name"].startswith("python-")
-        ]
-        
-        return filtered_packages
+        return packages
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code=500, detail=f"Failed to list packages: {e.stderr}")
     except Exception as e:
