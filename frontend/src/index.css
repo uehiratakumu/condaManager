@@ -872,3 +872,15 @@ input:checked+.slider:before {
   font-size: 0.95rem;
   font-weight: 500;
 }
+
+/* Prevent Chrome autocomplete from changing background color and font size */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px var(--bg-color) inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  font-size: 1rem !important;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
