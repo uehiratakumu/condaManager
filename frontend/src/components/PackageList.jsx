@@ -3,6 +3,8 @@ import Modal from './Modal'
 
 function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRefresh }) {
     const [newPackage, setNewPackage] = useState('')
+    const [packageVersion, setPackageVersion] = useState('')
+    const [specifyVersion, setSpecifyVersion] = useState(false)
     const [installing, setInstalling] = useState(false)
     const [confirmState, setConfirmState] = useState(null) // { type: 'install'|'uninstall'|'file-install', pkg: string, file: File }
     const [messageModal, setMessageModal] = useState(null) // { title, message }
@@ -11,7 +13,13 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
     const handleInstallClick = (e) => {
         e.preventDefault()
         if (!newPackage) return
-        setConfirmState({ type: 'install', pkg: newPackage })
+
+        let pkgToInstall = newPackage
+        if (specifyVersion && packageVersion) {
+            pkgToInstall = `${newPackage}=${packageVersion}`
+        }
+
+        setConfirmState({ type: 'install', pkg: pkgToInstall })
     }
 
     const handleUninstallClick = (pkgName) => {
@@ -41,6 +49,8 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
             try {
                 await onInstall(envName, pkg)
                 setNewPackage('')
+                setPackageVersion('')
+                setSpecifyVersion(false)
                 setMessageModal({ title: 'Success', message: `Package '${pkg}' installed successfully.` })
             } catch (err) {
                 setMessageModal({ title: 'Error', message: err.message })
@@ -91,17 +101,58 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
                         <button className="close-btn" onClick={onClose}>&times;</button>
                     </div>
 
-                    <form className="install-form" onSubmit={handleInstallClick}>
-                        <input
-                            type="text"
-                            placeholder="Package name (e.g. numpy)"
-                            value={newPackage}
-                            onChange={(e) => setNewPackage(e.target.value)}
-                            disabled={installing}
-                        />
-                        <button type="submit" className="create-btn" disabled={installing || !newPackage}>
-                            {installing ? 'Installing...' : 'Install'}
-                        </button>
+                    <form className="install-form" onSubmit={handleInstallClick} style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                        <div style={{ display: 'flex', gap: '1rem', width: '100%' }}>
+                            <input
+                                type="text"
+                                placeholder="Package name (e.g. numpy)"
+                                value={newPackage}
+                                onChange={(e) => setNewPackage(e.target.value)}
+                                disabled={installing}
+                                style={{ flex: 1 }}
+                            />
+                            <button type="submit" className="create-btn" disabled={installing || !newPackage}>
+                                {installing ? 'Installing...' : 'Install'}
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem', minHeight: '38px' }}>
+                            <label
+                                htmlFor="specify-version"
+                                style={{
+                                    fontSize: '0.9rem',
+                                    color: 'var(--text-primary)',
+                                    cursor: 'pointer',
+                                    userSelect: 'none',
+                                    fontWeight: '500',
+                                    marginRight: '-0.25rem'
+                                }}
+                            >
+                                Specify Version
+                            </label>
+
+                            <label className="toggle-switch">
+                                <input
+                                    type="checkbox"
+                                    id="specify-version"
+                                    checked={specifyVersion}
+                                    onChange={(e) => setSpecifyVersion(e.target.checked)}
+                                    disabled={installing}
+                                />
+                                <span className="slider"></span>
+                            </label>
+
+                            {specifyVersion && (
+                                <input
+                                    type="text"
+                                    placeholder="e.g. 1.21.0"
+                                    value={packageVersion}
+                                    onChange={(e) => setPackageVersion(e.target.value)}
+                                    disabled={installing}
+                                    style={{ width: '120px', padding: '0.4rem', fontSize: '0.9rem', marginLeft: '0.5rem' }}
+                                />
+                            )}
+                        </div>
                     </form>
 
                     <div style={{ marginBottom: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
