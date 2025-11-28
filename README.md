@@ -48,13 +48,13 @@ cd condaManager
 ```bash
 cd backend
 
-# 仮想環境の作成（推奨）
-python -m venv .venv
+# 初回のみ：仮想環境の作成（推奨）
+python -m venv .venv 
 
 # 仮想環境の有効化
 source .venv/bin/activate
 
-# 依存関係のインストール
+# 初回のみ：依存関係のインストール
 pip install -r requirements.txt
 
 # サーバーの起動
@@ -66,13 +66,13 @@ uvicorn main:app --reload
 ```powershell
 cd backend
 
-# 仮想環境の作成（推奨）
+# 初回のみ：仮想環境の作成（推奨）
 python -m venv .venv
 
 # 仮想環境の有効化
 .venv\Scripts\Activate.ps1
 
-# 依存関係のインストール
+# 初回のみ：依存関係のインストール
 pip install -r requirements.txt
 
 # サーバーの起動
@@ -84,13 +84,13 @@ uvicorn main:app --reload
 ```cmd
 cd backend
 
-# 仮想環境の作成（推奨）
+# 初回のみ：仮想環境の作成（推奨）
 python -m venv .venv
 
 # 仮想環境の有効化
 .venv\Scripts\activate.bat
 
-# 依存関係のインストール
+# 初回のみ：依存関係のインストール
 pip install -r requirements.txt
 
 # サーバーの起動
