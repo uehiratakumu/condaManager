@@ -36,12 +36,14 @@ Conda環境を閲覧、管理、分析するためのWebアプリケーション
 
 ```bash
 git clone https://github.com/uehiratakumu/condaManager.git
-cd <クローン先のディレクトリ>
+cd condaManager
 ```
 
 ### 2. バックエンドのセットアップ
 
 バックエンドはFastAPIで動作し、Condaとの対話を処理します。
+
+#### macOS/Linux の場合:
 
 ```bash
 cd backend
@@ -50,10 +52,43 @@ cd backend
 python -m venv .venv
 
 # 仮想環境の有効化
-# macOS/Linux:
 source .venv/bin/activate
-# Windows:
-# .venv\Scripts\activate
+
+# 依存関係のインストール
+pip install -r requirements.txt
+
+# サーバーの起動
+uvicorn main:app --reload
+```
+
+#### Windows (PowerShell) の場合:
+
+```powershell
+cd backend
+
+# 仮想環境の作成（推奨）
+python -m venv .venv
+
+# 仮想環境の有効化
+.venv\Scripts\Activate.ps1
+
+# 依存関係のインストール
+pip install -r requirements.txt
+
+# サーバーの起動
+uvicorn main:app --reload
+```
+
+#### Windows (Command Prompt) の場合:
+
+```cmd
+cd backend
+
+# 仮想環境の作成（推奨）
+python -m venv .venv
+
+# 仮想環境の有効化
+.venv\Scripts\activate.bat
 
 # 依存関係のインストール
 pip install -r requirements.txt
@@ -64,7 +99,9 @@ uvicorn main:app --reload
 
 バックエンドは `http://localhost:8000` で起動します。
 
-**注意:** 仮想環境を使用することで、システムのPython環境を汚染せずに依存関係を管理できます。
+**注意:** 
+- 仮想環境を使用することで、システムのPython環境を汚染せずに依存関係を管理できます
+- Windowsで PowerShell の実行ポリシーエラーが出る場合は、管理者権限で `Set-ExecutionPolicy RemoteSigned` を実行してください
 
 ### 3. フロントエンドのセットアップ
 
@@ -144,6 +181,14 @@ npm run dev
 - `conda` がシステムPATHに含まれているか確認
 - シェルの初期化が必要な場合: `conda init <shell_name>`
 - ターミナルを再起動して再試行
+- **Windows**: Anaconda Prompt または PowerShell を使用してください
+
+**仮想環境の有効化に失敗する (Windows)**
+- PowerShellで実行ポリシーエラーが出る場合:
+  ```powershell
+  Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+  ```
+- それでも失敗する場合は Command Prompt を使用してください
 
 **パッケージインストールが失敗する**
 - パッケージ名が正しいか確認
