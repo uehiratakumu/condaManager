@@ -7,14 +7,40 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
     const [specifyVersion, setSpecifyVersion] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [showInstallSection, setShowInstallSection] = useState(false)
+    const [sortBy, setSortBy] = useState('name') // 'name' or 'build_string'
+    const [sortOrder, setSortOrder] = useState('asc') // 'asc' or 'desc'
     const [installing, setInstalling] = useState(false)
     const [confirmState, setConfirmState] = useState(null) // { type: 'install'|'uninstall'|'file-install', pkg: string, file: File }
     const [messageModal, setMessageModal] = useState(null) // { title, message }
     const [selectedFile, setSelectedFile] = useState(null)
 
-    const filteredPackages = packages.filter(pkg =>
-        pkg.name.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    const filteredPackages = packages
+        .filter(pkg => pkg.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        .sort((a, b) => {
+            let valueA, valueB
+            if (sortBy === 'name') {
+                valueA = a.name.toLowerCase()
+                valueB = b.name.toLowerCase()
+            } else if (sortBy === 'build_string') {
+                valueA = a.build_string.toLowerCase()
+                valueB = b.build_string.toLowerCase()
+            }
+
+            if (sortOrder === 'asc') {
+                return valueA < valueB ? -1 : valueA > valueB ? 1 : 0
+            } else {
+                return valueA > valueB ? -1 : valueA < valueB ? 1 : 0
+            }
+        })
+
+    const handleSort = (column) => {
+        if (sortBy === column) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+        } else {
+            setSortBy(column)
+            setSortOrder('asc')
+        }
+    }
 
     const handleInstallClick = (e) => {
         e.preventDefault()
@@ -233,9 +259,13 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
                                 <table className="package-table">
                                     <thead>
                                         <tr>
-                                            <th>Name</th>
+                                            <th onClick={() => handleSort('name')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                                                Name {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                                            </th>
                                             <th>Version</th>
-                                            <th>Build</th>
+                                            <th onClick={() => handleSort('build_string')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                                                Build {sortBy === 'build_string' && (sortOrder === 'asc' ? '↑' : '↓')}
+                                            </th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>
