@@ -235,6 +235,7 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
                             confirmState.type === 'uninstall' ? 'Uninstall' :
                                 'Install'
                     }
+                    isDanger={confirmState.type === 'uninstall'}
                 />
             )}
 

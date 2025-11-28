@@ -1,4 +1,4 @@
-function Modal({ title, message, onConfirm, onCancel, confirmText = 'Confirm', isLoading = false }) {
+function Modal({ title, message, onConfirm, onCancel, confirmText = 'Confirm', isLoading = false, isDanger = false }) {
     return (
         <div className="modal-overlay">
             <div className="modal-content">
@@ -13,7 +13,7 @@ function Modal({ title, message, onConfirm, onCancel, confirmText = 'Confirm', i
                         Cancel
                     </button>
                     <button
-                        className="confirm-btn"
+                        className={isDanger ? "confirm-btn" : "create-btn"}
                         onClick={onConfirm}
                         disabled={isLoading}
                     >

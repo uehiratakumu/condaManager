@@ -294,6 +294,7 @@ function App() {
           onCancel={() => setDeleteTarget(null)}
           confirmText="Delete"
           isLoading={actionLoading}
+          isDanger={true}
         />
       )}
 
