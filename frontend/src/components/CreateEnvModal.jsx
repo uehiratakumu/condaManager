@@ -63,7 +63,8 @@ function CreateEnvModal({ onClose, onCreate, onSuccess }) {
                 onClose()
             }
         } catch (err) {
-            setError(err.message)
+            // Remove status code prefix if present (e.g. "400: Error message")
+            setError(err.message.replace(/^\d+:\s*/, ''))
         } finally {
             setLoading(false)
         }

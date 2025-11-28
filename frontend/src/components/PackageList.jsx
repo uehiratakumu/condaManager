@@ -45,7 +45,16 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
         e.preventDefault()
         if (!newPackage) return
 
-        setConfirmState({ type: 'install', pkg: newPackage })
+        // Extract package name (remove version specifiers)
+        const pkgName = newPackage.split(/[=<>]/)[0].trim()
+        const existingPkg = packages.find(p => p.name.toLowerCase() === pkgName.toLowerCase())
+
+        setConfirmState({
+            type: 'install',
+            pkg: newPackage,
+            isDuplicate: !!existingPkg,
+            currentVersion: existingPkg ? existingPkg.version : null
+        })
     }
 
     const handleUninstallClick = (pkgName) => {
@@ -80,7 +89,7 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
                 setMessageModal({ title: 'Success', message: `Package '${pkg}' installed successfully` })
             } catch (err) {
                 setLoadingModal(null)
-                setMessageModal({ title: 'Error', message: err.message })
+                setMessageModal({ title: 'Error', message: err.message.replace(/^\d+:\s*/, '') })
             } finally {
                 setInstalling(false)
             }
@@ -92,7 +101,7 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
                 setMessageModal({ title: 'Success', message: `Package '${pkg}' uninstalled successfully` })
             } catch (err) {
                 setLoadingModal(null)
-                setMessageModal({ title: 'Error', message: err.message })
+                setMessageModal({ title: 'Error', message: err.message.replace(/^\d+:\s*/, '') })
             }
         } else if (type === 'file-install') {
             setInstalling(true)
@@ -118,7 +127,7 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
                 setMessageModal({ title: 'Success', message: data.message })
             } catch (err) {
                 setLoadingModal(null)
-                setMessageModal({ title: 'Error', message: err.message })
+                setMessageModal({ title: 'Error', message: err.message.replace(/^\d+:\s*/, '') })
             } finally {
                 setInstalling(false)
             }
@@ -261,7 +270,10 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
                                 'Install from File'
                     }
                     message={
-                        confirmState.type === 'install' ? `Are you sure you want to install '${confirmState.pkg}' in '${envName}'?` :
+                        confirmState.type === 'install' ?
+                            (confirmState.isDuplicate ?
+                                `⚠️ Warning: Package '${confirmState.pkg.split(/[=<>]/)[0]}' is already installed (Version: ${confirmState.currentVersion}).\n\nAre you sure you want to install/update '${confirmState.pkg}' into '${envName}'?` :
+                                `Are you sure you want to install '${confirmState.pkg}' into '${envName}'?`) :
                             confirmState.type === 'uninstall' ? `Are you sure you want to uninstall '${confirmState.pkg}' from '${envName}'?` :
                                 `Are you sure you want to install packages from '${confirmState.file.name}' into '${envName}'?`
                     }
@@ -273,6 +285,7 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
                                 'Install'
                     }
                     isDanger={confirmState.type === 'uninstall'}
+                    isWarning={confirmState.type === 'install' && confirmState.isDuplicate}
                 />
             )}
 

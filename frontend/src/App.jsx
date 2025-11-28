@@ -115,7 +115,7 @@ function App() {
       setCloneTarget(null)
       setMessageModal({ title: 'Success', message: `Environment '${sourceName}' cloned to '${newName}' successfully.` })
     } catch (err) {
-      setMessageModal({ title: 'Error', message: err.message })
+      setMessageModal({ title: 'Error', message: err.message.replace(/^\d+:\s*/, '') })
     } finally {
       setActionLoading(false)
     }
@@ -138,7 +138,7 @@ function App() {
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
     } catch (err) {
-      setMessageModal({ title: 'Error', message: err.message })
+      setMessageModal({ title: 'Error', message: err.message.replace(/^\d+:\s*/, '') })
     }
   }
 
@@ -158,7 +158,7 @@ function App() {
       setDeleteTarget(null)
       setMessageModal({ title: 'Success', message: `Environment '${deleteTarget}' deleted successfully.` })
     } catch (err) {
-      setMessageModal({ title: 'Error', message: err.message })
+      setMessageModal({ title: 'Error', message: err.message.replace(/^\d+:\s*/, '') })
     } finally {
       setActionLoading(false)
     }
@@ -172,7 +172,7 @@ function App() {
       const data = await response.json()
       setPackages(data)
     } catch (err) {
-      setMessageModal({ title: 'Error', message: err.message })
+      setMessageModal({ title: 'Error', message: err.message.replace(/^\d+:\s*/, '') })
     } finally {
       setPackagesLoading(false)
     }
