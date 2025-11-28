@@ -99,7 +99,7 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
                             onChange={(e) => setNewPackage(e.target.value)}
                             disabled={installing}
                         />
-                        <button type="submit" className="confirm-btn" disabled={installing || !newPackage}>
+                        <button type="submit" className="create-btn" disabled={installing || !newPackage}>
                             {installing ? 'Installing...' : 'Install'}
                         </button>
                     </form>
@@ -119,7 +119,7 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
                         </div>
                         {selectedFile && (
                             <button
-                                className="confirm-btn"
+                                className="create-btn"
                                 onClick={handleFileInstallClick}
                                 disabled={installing}
                                 style={{ marginTop: '0.5rem', width: '100%' }}
