@@ -37,6 +37,13 @@ def import_environment(
         try:
             if file.filename.endswith('.yml') or file.filename.endswith('.yaml'):
                 # Conda environment file
+                # For YAML files, extract the name from the file if not provided
+                if name:
+                    # Check if environment already exists
+                    existing_envs = get_existing_env_names()
+                    if name in existing_envs:
+                        raise HTTPException(status_code=400, detail=f"Environment '{name}' already exists. Please choose a different name.")
+                
                 cmd = ["conda", "env", "create", "-f", temp_filename]
                 if name:
                     cmd.extend(["-n", name])
@@ -48,6 +55,11 @@ def import_environment(
                 # Requirements file
                 if not name:
                     raise HTTPException(status_code=400, detail="Environment name is required for requirements.txt import")
+                
+                # Check if environment already exists
+                existing_envs = get_existing_env_names()
+                if name in existing_envs:
+                    raise HTTPException(status_code=400, detail=f"Environment '{name}' already exists. Please choose a different name.")
                 
                 # 1. Create environment
                 subprocess.run(
@@ -228,9 +240,46 @@ class CreateEnvRequest(BaseModel):
     name: str
     python_version: str = "3.9"
 
+def get_existing_env_names():
+    """Get list of existing environment names"""
+    try:
+        result = subprocess.run(
+            ["conda", "env", "list", "--json"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        data = json.loads(result.stdout)
+        
+        # Get conda root prefix to identify base environment
+        info_res = subprocess.run(
+            ["conda", "info", "--json"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        info_data = json.loads(info_res.stdout)
+        root_prefix = info_data.get("root_prefix")
+        
+        env_names = []
+        for path in data.get("envs", []):
+            if path == root_prefix:
+                env_names.append("base")
+            else:
+                env_names.append(path.split("/")[-1])
+        
+        return env_names
+    except Exception:
+        return []
+
 @app.post("/api/envs")
 def create_environment(request: CreateEnvRequest):
     try:
+        # Check if environment already exists
+        existing_envs = get_existing_env_names()
+        if request.name in existing_envs:
+            raise HTTPException(status_code=400, detail=f"Environment '{request.name}' already exists. Please choose a different name.")
+        
         print(f"Creating environment '{request.name}' with Python version: {request.python_version}")
         # Use conda-forge channel to ensure the requested Python version is available
         result = subprocess.run(
@@ -256,6 +305,11 @@ class CloneEnvRequest(BaseModel):
 @app.post("/api/envs/{name}/clone")
 def clone_environment(name: str, request: CloneEnvRequest):
     try:
+        # Check if new environment name already exists
+        existing_envs = get_existing_env_names()
+        if request.new_name in existing_envs:
+            raise HTTPException(status_code=400, detail=f"Environment '{request.new_name}' already exists. Please choose a different name.")
+        
         subprocess.run(
             ["conda", "create", "--name", request.new_name, "--clone", name, "-y"],
             capture_output=True,
