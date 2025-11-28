@@ -109,12 +109,12 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
                         <div className="file-input-wrapper">
                             <input
                                 type="file"
-                                accept=".txt,.yml,.yaml"
+                                accept=".txt"
                                 onChange={handleFileSelect}
                                 disabled={installing}
                             />
                             <div className="file-input-label">
-                                {selectedFile ? selectedFile.name : 'Select requirements.txt / environment.yml'}
+                                {selectedFile ? selectedFile.name : 'Select requirements.txt'}
                             </div>
                         </div>
                         {selectedFile && (
