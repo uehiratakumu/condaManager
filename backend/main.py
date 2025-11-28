@@ -102,10 +102,23 @@ def get_environments():
         )
         data = json.loads(result.stdout)
         
+        # Get conda root prefix to identify base environment
+        info_res = subprocess.run(
+            ["conda", "info", "--json"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        info_data = json.loads(info_res.stdout)
+        root_prefix = info_data.get("root_prefix")
+
         envs = []
         for path in data.get("envs", []):
             # Extract name from path
-            name = path.split("/")[-1]
+            if path == root_prefix:
+                name = "base"
+            else:
+                name = path.split("/")[-1]
             
             # Get Size
             size = "N/A"
