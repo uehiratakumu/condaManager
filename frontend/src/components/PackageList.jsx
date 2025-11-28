@@ -11,6 +11,7 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
     const [confirmState, setConfirmState] = useState(null) // { type: 'install'|'uninstall'|'file-install', pkg: string, file: File }
     const [messageModal, setMessageModal] = useState(null) // { title, message }
     const [selectedFile, setSelectedFile] = useState(null)
+    const [loadingModal, setLoadingModal] = useState(null) // { message } for showing loading state
 
     const filteredPackages = packages
         .filter(pkg => pkg.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -71,24 +72,31 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
 
         if (type === 'install') {
             setInstalling(true)
+            setLoadingModal({ message: `Installing ${pkg}...` })
             try {
                 await onInstall(envName, pkg)
                 setNewPackage('')
-                setMessageModal({ title: 'Success', message: `Package '${pkg}' installed successfully.` })
+                setLoadingModal(null)
+                setMessageModal({ title: 'Success', message: `Package '${pkg}' installed successfully` })
             } catch (err) {
+                setLoadingModal(null)
                 setMessageModal({ title: 'Error', message: err.message })
             } finally {
                 setInstalling(false)
             }
         } else if (type === 'uninstall') {
+            setLoadingModal({ message: `Uninstalling ${pkg}...` })
             try {
                 await onUninstall(envName, pkg)
-                setMessageModal({ title: 'Success', message: `Package '${pkg}' uninstalled successfully.` })
+                setLoadingModal(null)
+                setMessageModal({ title: 'Success', message: `Package '${pkg}' uninstalled successfully` })
             } catch (err) {
+                setLoadingModal(null)
                 setMessageModal({ title: 'Error', message: err.message })
             }
         } else if (type === 'file-install') {
             setInstalling(true)
+            setLoadingModal({ message: `Installing packages from ${file.name}...` })
             try {
                 const formData = new FormData()
                 formData.append('file', file)
@@ -106,8 +114,10 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
                 const data = await response.json()
                 if (onRefresh) onRefresh()
                 setSelectedFile(null)
+                setLoadingModal(null)
                 setMessageModal({ title: 'Success', message: data.message })
             } catch (err) {
+                setLoadingModal(null)
                 setMessageModal({ title: 'Error', message: err.message })
             } finally {
                 setInstalling(false)
@@ -274,6 +284,17 @@ function PackageList({ packages, envName, onClose, onInstall, onUninstall, onRef
                     onCancel={() => setMessageModal(null)}
                     confirmText="OK"
                 />
+            )}
+
+            {/* Loading Modal */}
+            {loadingModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ textAlign: 'center' }}>
+                        <h2>Processing...</h2>
+                        <p style={{ fontSize: '1.1rem', margin: '1.5rem 0' }}>{loadingModal.message}</p>
+                        <div style={{ fontSize: '2rem', animation: 'spin 1s linear infinite' }}>⟳</div>
+                    </div>
+                </div>
             )}
         </>
     )
