@@ -39,9 +39,25 @@ git clone https://github.com/uehiratakumu/condaManager.git
 cd condaManager
 ```
 
-### 2. バックエンドのセットアップ
+### 2. クイックセットアップ（推奨）
 
-バックエンドはFastAPIで動作し、Condaとの対話を処理します。
+#### macOS/Linux:
+```bash
+./setup.sh
+```
+
+#### Windows:
+```cmd
+setup.bat
+```
+
+セットアップ完了後、`./start.sh`（Windows: `start.bat`）でアプリケーションを起動できます。
+
+---
+
+**または、手動でセットアップする場合は以下の手順に従ってください：**
+
+### 3. バックエンドのセットアップ（手動）
 
 #### macOS/Linux の場合:
 
@@ -103,7 +119,7 @@ uvicorn main:app --reload
 - 仮想環境を使用することで、システムのPython環境を汚染せずに依存関係を管理できます
 - Windowsで PowerShell の実行ポリシーエラーが出る場合は、管理者権限で `Set-ExecutionPolicy RemoteSigned` を実行してください
 
-### 3. フロントエンドのセットアップ
+### 4. フロントエンドのセットアップ（手動）
 
 フロントエンドはViteで構築されたReactアプリケーションです。
 
@@ -120,6 +136,24 @@ npm run dev
 ```
 
 フロントエンドは `http://localhost:5173` で起動します。
+
+### 5. アプリケーションの起動
+
+セットアップ完了後は、1つのコマンドで両方のサーバーを起動できます：
+
+#### macOS/Linux:
+```bash
+./start.sh
+```
+
+#### Windows:
+```cmd
+start.bat
+```
+
+**注意:** 
+- スクリプトはバックエンドとフロントエンドを同時に起動します
+- 終了するには `Ctrl+C` を押してください
 
 ## 使い方
 
